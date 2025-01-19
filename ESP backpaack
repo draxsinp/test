@@ -1,0 +1,69 @@
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local Camera = game:GetService("Workspace").CurrentCamera
+local RunService = game:GetService("RunService")
+
+-- Função para atualizar o ESP
+local function createESP(item)
+    -- Verifica se o item tem uma PrimaryPart
+    if not item.PrimaryPart then return end
+
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "ESP_UI"
+    screenGui.Parent = game.Players.LocalPlayer.PlayerGui
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = "ESP_Text"
+    textLabel.Size = UDim2.new(0, 200, 0, 30)
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextColor3 = Color3.fromRGB(255, 140, 0)  -- Laranja escuro
+    textLabel.Font = Enum.Font.SourceSans
+    textLabel.TextSize = 14
+    textLabel.TextStrokeTransparency = 0.8
+    textLabel.Parent = screenGui
+
+    -- Atualiza o ESP com a posição e distância do item
+    local function updateESP()
+        local primaryPart = item.PrimaryPart
+        if not primaryPart then return end
+
+        local screenPos, onScreen = Camera:WorldToViewportPoint(primaryPart.Position)
+        if onScreen then
+            textLabel.Position = UDim2.new(0, screenPos.X, 0, screenPos.Y)
+            local distance = (Players.LocalPlayer.Character.HumanoidRootPart.Position - primaryPart.Position).Magnitude
+            if distance <= 4000 then
+                textLabel.Text = item.Name .. " | " .. math.floor(distance) .. "m"
+                textLabel.Visible = true
+            else
+                textLabel.Visible = false
+            end
+        else
+            textLabel.Visible = false
+        end
+    end
+
+    -- Conecta a função de atualização ao Heartbeat
+    RunService.Heartbeat:Connect(updateESP)
+end
+
+-- Esp sobre todos os itens dropados já existentes (por exemplo, DroppedPacks)
+for _, item in pairs(Workspace.DroppedPacks:GetChildren()) do
+    if item:IsA("Model") and item.PrimaryPart then
+        createESP(item)
+    end
+end
+
+-- Atualiza quando novos itens dropados são adicionados
+Workspace.DroppedPacks.ChildAdded:Connect(function(child)
+    if child:IsA("Model") and child.PrimaryPart then
+        createESP(child)
+    end
+end)
+
+-- Remover o ESP quando o item for destruído
+Workspace.DroppedPacks.ChildRemoved:Connect(function(child)
+    local screenGui = game.Players.LocalPlayer.PlayerGui:FindFirstChild("ESP_UI")
+    if screenGui then
+        screenGui:Destroy()
+    end
+end)
